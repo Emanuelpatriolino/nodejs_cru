@@ -1,53 +1,38 @@
 import http from "node:http"
-const users = []
+import { randomUUID } from "node:crypto"
+import { json } from "./middlewares/json.js"
+import { Database } from "./middlewares/database.js"
+
+const database = new Database()
+
 const server = http.createServer(async (req, res) => {
+    
     const {method, url} = req
 
-    const buffers = []
+    await json(req, res)
+    //esse json é uma função que esta na pasta middlewares, isso nada mais é do que um "interceptador", são facil de ser identificados porque sempre recebem como parametros REQ e RES que vão ser tratador lá dentro quando foram interceptados
 
-    for await ( const chunk of req){
-        buffers.push(chunk)
+    if ( method === "POST" && url === "/users"){
+        const { name, email } = req.body
+
+        const user = {
+            id: randomUUID(),
+            name,
+            email
+        }
+
+        database.insert('users', user)
+
+        return res.writeHead(201).end()
+    }
+    
+    if (method === "GET" && url === "/users"){
+        const users = database.select('users')
+        
+        return res.end(JSON.stringify(users))
     }
 
-    try{
-        req.body = JSON.parse(Buffer.concat(buffers).toString())
-    } catch {
-        req.body = null
-    }
-
-    if( method === "POST" && url === "/users"){
-        const {id, name, email } = req.body
-        users.push(
-            {
-                id:1,
-                name,
-                email,
-            }
-        )
-        res.end()
-        return;
-    }
-    if(method === "GET" && url === "/users"){
-        res.writeHead(200, {"content-type" : "application/json"})
-        res.end(JSON.stringify(users))
-        return;
-    }
-    if (method === "PUT" && url === "/users"){
-        const novoNome = "alterado22"
-        users.splice(0, users[0].nome = novoNome)
-        res.writeHead(200, {"contend-type" : "application/json"})
-        res.end()
-        return;
-    }
-    if(method === "DELETE" && url === "/users"){
-        users.splice(1, users.length)
-
-        res.writeHead(200, {"content-type" : "application/json"})
-        res.end()
-        return;
-    }  
-
-    res.writeHead(400).end("Not Found")
-    return;
+    return res.writeHead(404).end()
 })
+
 server.listen(3000)
