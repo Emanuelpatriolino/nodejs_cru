@@ -1,7 +1,7 @@
 import http from "node:http"
 import { randomUUID } from "node:crypto"
 import { json } from "./middlewares/json.js"
-import { Database } from "./middlewares/database.js"
+import { Database } from "./database.js"
 
 const database = new Database()
 
@@ -13,12 +13,13 @@ const server = http.createServer(async (req, res) => {
     //esse json é uma função que esta na pasta middlewares, isso nada mais é do que um "interceptador", são facil de ser identificados porque sempre recebem como parametros REQ e RES que vão ser tratador lá dentro quando foram interceptados
 
     if ( method === "POST" && url === "/users"){
-        const { name, email } = req.body
+        const { name, email, phone } = req.body
 
         const user = {
             id: randomUUID(),
             name,
-            email
+            email,
+            phone: phone || ""
         }
 
         database.insert('users', user)
