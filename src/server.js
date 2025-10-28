@@ -1,36 +1,24 @@
 import http from "node:http"
-import { randomUUID } from "node:crypto"
 import { json } from "./middlewares/json.js"
-import { Database } from "./database.js"
-
-const database = new Database()
+import { routes } from "./routes.js"
 
 const server = http.createServer(async (req, res) => {
     
     const {method, url} = req
 
     await json(req, res)
-    //esse json é uma função que esta na pasta middlewares, isso nada mais é do que um "interceptador", são facil de ser identificados porque sempre recebem como parametros REQ e RES que vão ser tratador lá dentro quando foram interceptados
 
-    if ( method === "POST" && url === "/users"){
-        const { name, email, phone } = req.body
+    const route = routes.find(route => {
+        return route.method === method && route.path.test(url)
+    })
 
-        const user = {
-            id: randomUUID(),
-            name,
-            email,
-            phone: phone || ""
-        }
+    if(route){
+        const routeParams = req.url.match(route.path)
 
-        database.insert('users', user)
-
-        return res.writeHead(201).end()
-    }
-    
-    if (method === "GET" && url === "/users"){
-        const users = database.select('users')
+        req.params = {...routeParams.groups}
         
-        return res.end(JSON.stringify(users))
+
+        return route.handler(req, res)
     }
 
     return res.writeHead(404).end()
